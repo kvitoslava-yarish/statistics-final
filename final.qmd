@@ -1,0 +1,662 @@
+---
+title: "Calculation and graphic work in Statistics"
+author: "Kvitoslava Yarish"
+date: "2024-12-01"
+format: html
+jupyter: python3
+---
+
+```{python}
+#| message: false
+#| echo: false
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import stats
+
+```
+
+## The sample data
+
+```{python}
+#| message: false
+#| echo: false
+values = np.array([0.63, 0.74, 2.44, 0.27, 2.46, 2.41, 0.77, 4.78, 1.58, 0.15,0.02, 1.67, 1.93, 0.37, 0.82, 0.05, 2.34, 0.19, 3.23, 1.62, 2.41, 0.18, 0.1 , 0.75, 1.97, 2.4 , 0.06, 4.81, 0.87, 2.05,0.32, 0.46, 1.47, 0.08, 0.23, 3.94, 0.57, 0.32, 1.89, 2.45,0.27, 2.51, 0.17, 0.04, 0.57, 2.44, 1.05, 5.69, 0.47, 0.59,0.64, 2.09, 1.61, 0.29, 0.82, 1.82, 0.03, 0.78, 0.36, 0.52,0.09, 1.59, 0.46, 1.17, 0.74, 0.11, 1.51, 2.33, 0.58, 0.11,1.97, 0.06, 0.35, 0.25, 0.61, 0.22, 0.79, 1.59, 3.54, 0.62,0.67, 1.57, 0.47, 0.3 , 0.05, 2.09, 0.23, 1.91, 1.5 , 0.35,1.48, 2.75, 1.43, 2.54, 1.45, 1.38, 0.23, 0.81, 1.19, 1.39])
+values_list = [0.63, 0.74, 2.44, 0.27, 2.46, 2.41, 0.77, 4.78, 1.58, 0.15,0.02, 1.67, 1.93, 0.37, 0.82, 0.05, 2.34, 0.19, 3.23, 1.62, 2.41, 0.18, 0.1 , 0.75, 1.97, 2.4 , 0.06, 4.81, 0.87, 2.05,0.32, 0.46, 1.47, 0.08, 0.23, 3.94, 0.57, 0.32, 1.89, 2.45,0.27, 2.51, 0.17, 0.04, 0.57, 2.44, 1.05, 5.69, 0.47, 0.59,0.64, 2.09, 1.61, 0.29, 0.82, 1.82, 0.03, 0.78, 0.36, 0.52,0.09, 1.59, 0.46, 1.17, 0.74, 0.11, 1.51, 2.33, 0.58, 0.11,1.97, 0.06, 0.35, 0.25, 0.61, 0.22, 0.79, 1.59, 3.54, 0.62,0.67, 1.57, 0.47, 0.3 , 0.05, 2.09, 0.23, 1.91, 1.5 , 0.35,1.48, 2.75, 1.43, 2.54, 1.45, 1.38, 0.23, 0.81, 1.19, 1.39]
+
+values = np.sort(values)
+
+print(values_list)
+```
+
+Based form the sample provided it can be concluded that this is continuous distribution as numbers are decimal mostly and almost do not have dublicates
+
+| Size of sample | Min element | Max element | Range |
+|------------------|------------------|------------------|------------------|
+| `{python} len(values)` | `{python} min(values_list)` | `{python} max(values_list)` | `{python} max(values_list) - min(values_list)` |
+
+### Interval frequency distribution
+
+To build interval frequency distribution I will divide sample into classes based on Sturge's rule using this formula 
+$$ 
+m = 1 + \left\lfloor \log_2 n \right\rfloor 
+$$
+
+Where: - ( m ) is the number of classes. - ( n ) is the size of the sample.
+
+To determine the length of class I will use this formula $$
+h = \frac{x_{(n)} - x_{(1)}}{m}.
+$$
+
+Also the middle of each class will be calculated by $$
+x_k^*=\frac{y_{k-1}+y_k}{2}.
+$$
+
+------------------------------------------------------------------------
+
+```{python}
+#| message: false
+#| echo: false
+bin_num = 1 + np.floor(np.log2(len(values)))
+bin_num = float(bin_num)
+bin_len = np.round((values[-1] - values[0])/bin_num,2 )
+bin_len = float(bin_len)
+```
+
+Amount of classes is `{python} bin_num` and the width of classes is `{python} bin_len`
+
+Formulas used to calculate metrics in a table below
+
+| Class | Middle of the class | Frequency | Cumulative frequency | Relative frequency | Cumulative relative frequency |
+|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|
+| $\Delta_1$ | $x_1^*$ | $n_1$ | $n_1^*$ | $\nu_1=\frac{n_1}{n}$ | $\nu_1^*=\nu_1$ |
+| $\Delta_2$ | $x_2^*$ | $n_2$ | $n_2^*=n_1+n_2$ | $\nu_2=\frac{n_2}{n}$ | $\nu_2^*=\nu_1+\nu_2$ |
+| ... | ... | ... | ... | ... | ... |
+| $\Delta_m$ | $x_m^*$ | $n_m$ | $n_m^*\!=n_1\!+\!\ldots\!+\!n_m\!=\!n$ | $\nu_m=\frac{n_m}{n}$ | $\nu_m^*=\nu_1+\ldots+\nu_m=1$ |
+
+```{python}
+#| message: false
+#| echo: false
+bins = np.arange(0, np.ceil(values[-1]), bin_len)
+bins[-1] = bins[-1] + 0.1
+frequencies, bin_edges = np.histogram(values, bins=bins)
+bin_edges = np.round(bin_edges, 2)
+middle = [np.round((bin_edges[i] + bin_edges[i +1])/2, 2 )for i in range(len(bin_edges) -1)]
+cum_freq = np.cumsum(frequencies)
+rel_freq = frequencies/len(values)
+cum_real_freq = np.cumsum(rel_freq)
+
+df = pd.DataFrame({
+    'Bins': [f"{bin_edges[i]} - {bin_edges[i+1]}" for i in range(len(bin_edges) -1)],
+    'Bin_Middle': middle,
+    'Frequency': frequencies,
+    'Cumulative_Frequency': cum_freq,
+    'Relative_Frequency': rel_freq,
+    'Cumulative Relative Frequency': cum_real_freq
+})
+df
+```
+
+<br> So that sum of all areas of obtained rectangles equals to 1 I will use the corrected relative frequencies. 
+$$
+h_k=\frac{\nu_k}{l(\Delta_k)}, \quad k=1, \ldots, m,
+$$
+
+```{python}
+#| message: false
+#| echo: false
+#| fig-width: 10
+#| fig-asp: 0.618
+plt.figure(figsize=(10, 6))
+
+corrected_rel_freq = rel_freq/bin_len
+plt.bar(middle, corrected_rel_freq, width=bin_len, align='center', edgecolor='black')
+
+plt.title('Relative Frequency Distribution', fontsize=14)
+plt.xlabel('Value Range (Bin Midpoints)', fontsize=12)
+plt.ylabel('Relative Frequency', fontsize=12)
+plt.xticks(middle, rotation=45)
+plt.grid(True)
+plt.show()
+```
+
+### Empirical cumulative distribution function
+
+The formula used to calculate the empirical cumulative distribution function 
+$$
+\begin{aligned}
+F_n^*(x) &= \frac{\text{number of } x_k \text{ that are less or equal to the right end of a class that contains } x}{n}, \\
+&= \begin{cases} 
+0, & x < y_0, \\
+\frac{n_1}{n}, & y_0 \leq x < y_1, \\
+\frac{n_1 + n_2}{n}, & y_1 \leq x < y_2, \\
+\vdots, & \vdots \\
+\frac{n_1 + \ldots + n_{m-1}}{n}, & y_{m-2} \leq x < y_{m-1}, \\
+1, & x \geq y_{m-1}.
+\end{cases} \\
+&= \begin{cases} 
+0, & x < y_0, \\
+\nu_1^*, & y_0 \leq x < y_1, \\
+\nu_2^*, & y_1 \leq x < y_2, \\
+\vdots, & \vdots \\
+\nu_{m-1}^*, & y_{m-2} \leq x < y_{m-1}, \\
+1, & x \geq y_{m-1}.
+\end{cases}
+\end{aligned}
+$$
+
+For our realization the empirical cumulative distribution function has a form
+
+```{python}
+#| message: false
+#| echo: false
+cdf = cum_freq /len(values)
+cdf = list(cum_freq /len(values))
+cdf = list(map(float, cdf))
+print(cdf)
+bin_edges_1 = list(map(float, list(bin_edges)))
+print(bin_edges_1)
+
+```
+
+$$
+F_n^*(x)=\left\{\begin{array}{ll}
+0, & x < `{python} bin_edges_1[0]`, \\
+`{python} cdf[3]`, &`{python} bin_edges_1[0]` \leq x < `{python} bin_edges_1[1]`, \\
+`{python} cdf[1]`, & `{python} bin_edges_1[1]` \leq x < `{python} bin_edges_1[2]`, \\
+`{python} cdf[2]`, & `{python} bin_edges_1[2]` \leq x < `{python} bin_edges_1[3]`, \\
+`{python} cdf[3]`, & `{python} bin_edges_1[3]` \leq x < `{python} bin_edges_1[4]`, \\
+`{python} cdf[4]`, & `{python} bin_edges_1[4]` \leq x < `{python} bin_edges_1[5]`, \\
+`{python} cdf[5]`, &`{python} bin_edges_1[5]`\leq x < `{python} bin_edges_1[6]`, \\
+1, & x \geq `{python} bin_edges_1[6]`.
+\end{array}\right.
+$$
+
+```{python}
+#| message: false
+#| echo: false
+#| fig-width: 10
+#| fig-asp: 0.618
+def plot_empirical_cdf(x_sample, y_sample):
+
+    plt.plot([x_sample[0] - 0.5, x_sample[0]], [0, 0], linewidth=2, color='b')
+    for i in range(len(x_sample)-1):
+        plt.plot([x_sample[i], x_sample[i + 1]], [y_sample[i], y_sample[i]], linewidth=2, color='b')
+        plt.vlines(x_sample[i], ymin=0, ymax=y_sample[i], linewidth=0.3, color='r', linestyles='dashed')
+
+    plt.plot([x_sample[len(x_sample)-1], x_sample[len(x_sample)-1] + 0.5], [1, 1], linewidth=2, color='b')
+    
+    plt.vlines(x_sample.max(), ymin=0, ymax=1, linewidth=0.3, color='r', linestyles='dashed')
+    plt.title('Cumulative Distribution Function (CDF)', fontsize=14)
+    plt.xlabel('Value', fontsize=12)
+    plt.ylabel('Cumulative Probability', fontsize=12)
+    plt.show()
+
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.spines['bottom'].set_position('zero')
+ax.xaxis.set_tick_params(labelsize=15)
+ax.yaxis.set_tick_params(labelsize=15)
+ax.set_xlim(bin_edges[0] - 0.5, bin_edges[-1] + 0.5)
+ax.set_xticks(bin_edges)
+ax.set_yticks([0.2, 0.4, 0.6, 0.8, 1])
+
+plot_empirical_cdf(bin_edges[:-1], cdf)
+plt.show()
+```
+
+
+```{python}
+#| message: false
+#| echo: false
+mean = float(np.round(np.mean(values), 3))
+median = float(np.round(np.median(values), 3))
+
+
+sample_mean_grouped =sum(df['Bin_Middle'] * df['Relative_Frequency']) 
+sample_median_grouped = (values[int(np.floor(len(values)/ 2))] + values[int(np.ceil(len(values)/ 2))]) /2 if len(values) % 2 == 0 else values[int(len(values)/2)]
+sample_mean_grouped = float(np.round(sample_mean_grouped, 3))
+
+#
+n = len(values)
+median_position = n / 2
+median_class_index = np.where(df['Cumulative_Frequency'] >= median_position)[0][0] 
+y_me_minus_1 = bin_edges[median_class_index]  
+n_me = df['Frequency'][median_class_index]
+n_me_minus_1 = df['Frequency'][median_class_index - 1] if median_class_index > 0 else 0
+sample_median_grouped = y_me_minus_1 + bin_len * (median_position - n_me_minus_1) / n_me
+sample_median_grouped = float(np.round(sample_median_grouped, 3))
+#
+mode_position = df['Frequency'].idxmax()
+y_mo_minus_1 = bin_edges[median_class_index]
+n_mo = df['Frequency'][median_class_index]
+n_mo_minus_1 =  df['Frequency'][median_class_index - 1] if median_class_index > 0 else 0
+n_mo_plus_1 = df['Frequency'][median_class_index + 1]
+sample_mode_grouped = y_mo_minus_1 + bin_len * ((n_mo - n_mo_minus_1) / (2*n_mo - n_mo_minus_1 -n_mo_plus_1))
+sample_mode_grouped = float(np.round(sample_mode_grouped, 3))
+
+sample_variance_grouped = float(np.round(np.sum(df['Relative_Frequency'] * ((df['Bin_Middle'] - sample_mean_grouped) **2)), 3))
+
+var = float(np.round(np.var(values), 3))
+unbiased_var = float(np.round(np.var(values, ddof=1),3))
+unbiased_variance_grouped = float(np.round(len(values) / (len(values) -1)* sample_variance_grouped, 3))
+
+sample_skewness = float(np.round(stats.skew(values), 3))
+sample_kurtosis = float(np.round(stats.kurtosis(values), 3))
+
+```
+
+## Sample characteristics of a population
+In this part I will calculate characteristics both grouped and general.
+
+> Sample mean is defined as
+>
+>$$
+\overline{x}=\frac{1}{n}\sum\limits_{i=1}^nx_i.
+$$
+>
+> In case of a grouped data the following formula is used
+>
+>$$
+\overline{x}=\frac{1}{n}\sum\limits_{i=1}^mn_ix^*_i=\sum\limits_{i=1}^m\nu_ix^*_i.
+$$
+>
+
+> Let $x_{(1)}\leq x_{(2)}\leq \ldots\leq x_{(n)}$ be a variation series. *Sample median* is defined as
+>
+>$$
+\mbox{Me}^*X=\left\{
+\begin{array}{ll}
+x_{(k+1)}, & n=2k+1, \\
+\dfrac{x_{(k)}+x_{(k+1)}}{2}, & n=2k.
+\end{array}
+\right.
+$$
+>
+> For grouped data
+>$$
+n^*_{me-1}<\frac{n}{2}, \quad n^*_{me}\geq\frac{n}{2},
+$$
+>
+> where $n^*_k$ is a cumulative frequency of $k$-th class;
+> - an element of the obtained class, that corresponds to the median, is found by the formula
+>
+>$$
+\mbox{Me}^*X=y_{me-1}+h\cdot\frac{\frac{n}{2}-n^*_{me-1}}{n_{me}},
+$$
+>
+> where $h$ is a width of a class, $y_{me-1}$ and $n_{me}$ are left bound and frequency of a class that contains the median.
+    
+> The value of the mode is found by the formula
+>
+>$$
+\mbox{Mo}^*X=y_{mo-1}+h\cdot\frac{n_{mo}-n_{mo-1}}{(n_{mo}-n_{mo-1})+(n_{mo}-n_{mo+1})}
+$$
+>
+> where $h$ is a width of a class, $y_{mo-1}$ is the left bound of the modal class, $n_{mo}$, $n_{mo-1}$, $n_{mo+1}$ are frequencies of modal, pre-modal and post-modal classes.
+
+
+| Sample mean | Sample mean (grouped) | Sample median | Sample median (grouped) | Sample mode |
+|---------------|---------------|---------------|---------------|---------------|
+| `{python} mean` | `{python} sample_mean_grouped` | `{python} median` | `{python} sample_median_grouped` | `{python} sample_mode_grouped` |
+
+: Measures of central tendency
+
+As mean, median and mode are not the same or close to each other, the sample provided does not follow normal distribution.
+
+### Measures of dispersion
+
+> Let the expected value of the population be known, $\mathbb{E}X=\mu$. Then the sample variance is determined as follows
+>
+>$$
+\mbox{Var}^*X=\frac{1}{n}\sum\limits_{i=1}^n(x_i-\mu)^2.
+$$
+>    
+> In case of a grouped data the following formula is used
+>
+>$$
+\mbox{Var}^*X=\frac{1}{n}\sum\limits_{i=1}^mn_i\left(x^*_i-\mu\right)^2=\sum\limits_{i=1}^m\nu_i\left(x^*_i-\mu\right)^2.
+$$    
+    
+> If the expected value of the population is unknown, then it is considered the sample variance
+>
+>$$
+\mbox{Var}^{**}X=\frac{1}{n}\sum\limits_{i=1}^n\left(x_i-\overline{x}\right)^2
+$$
+>
+>or *corrected (unbiased)* sample variance
+>
+>$$
+\mbox{Var}^{***}X=\frac{1}{n-1}\sum\limits_{i=1}^n\left(x_i-\overline{x}\right)^2.
+$$
+>
+> Corresponding formulae for grouped data are of the form
+>
+>$$
+\mbox{Var}^{**}X=\frac{1}{n}\sum\limits_{i=1}^mn_i\left(x^*_i-\overline{x}\right)^2=\sum\limits_{i=1}^m\nu_i\left(x^*_i-\overline{x}\right)^2 \quad \mbox{та} \quad
+\mbox{Var}^{***}X=\frac{1}{n-1}\sum\limits_{i=1}^mn_i\left(x^*_i-\overline{x}\right)^2=
+\frac{n}{n-1}\sum\limits_{i=1}^m\nu_i\left(x^*_i-\overline{x}\right)^2.
+$$    
+>
+    
+It is defined also a *sample standard deviation* - the square root of the sample variance
+$$
+\sigma^*_X=\sqrt{\mbox{Var}^*X}, \quad \sigma^{**}_X =\sqrt{\mbox{Var}^{**}X}, \quad \sigma^{***}_X=\sqrt{\mbox{Var}^{***}X}.
+$$
+
+| Sample variance | Corrected sample variance | Sample variance (grouped) | Corrected sample variance (grouped) |
+|------------------|------------------|------------------|------------------|
+| `{python} var` | `{python} unbiased_var` | `{python} sample_variance_grouped` | `{python} unbiased_variance_grouped` |
+
+: Measures of dispersion
+
+### Measures of a shape
+> let's consider a *sample moment* of $k$-th order
+
+> $$
+\mu^*_k=\frac{1}{n}\sum\limits_{i=1}^nx_i^k
+$$
+
+> and a *sample central moment* of $k$-th order
+    
+> $$
+\mu^*_{k, 0}=\frac{1}{n}\sum\limits_{i=1}^n\left(x_i-\overline{x}\right)^k.
+$$
+    
+> In particular, $\mu^*_1=\overline{x}$, $\mu^*_{2, 0}=\mbox{Var}^{**}X$.
+    
+> *Sample skewness* is defined as
+>
+>$$
+\mbox{Sk}^*X=\frac{\mu^*_{3, 0}}{\left(\sigma^{***}_X\right)^3}
+$$
+>
+> and it characterizes the degree of symmetry of the distribution of data with respect to the sample mean:
+> - $\mbox{Sk}^*X\approx0$ - the data are symmetric with respect to the sample mean;
+> - $\mbox{Sk}^*X>0$ - the data have right-sided asymmetry (long right tail);
+> - $\mbox{Sk}^*X<0$ - the data have left-sided asymmetry (long left tail).
+
+| Sample skeweness           | Sample kurtosis            |
+|----------------------------|----------------------------|
+| `{python} sample_skewness` | `{python} sample_kurtosis` |
+
+: Measures of a shape
+
+## Making a hypothesis about the distribution of a population
+
+```{python}
+#| message: false
+#| echo: false
+#| fig-width: 10
+#| fig-asp: 0.618
+fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15, 5), sharey=True)
+fig.tight_layout()
+for i in range(3):
+    ax[i].spines['right'].set_visible(False)
+    ax[i].spines['top'].set_visible(False)
+    # ax[i].spines['left'].set_position('zero')
+    ax[i].spines['bottom'].set_position('zero')
+
+x = np.linspace(min(list(values)) - 0.5, max(list(values)) + 0.5, num=200)
+y0 = stats.uniform.pdf(x, loc=0, scale=6)
+y1 = stats.expon.pdf(x, loc=0, scale=1.5)
+y2 = stats.norm.pdf(x, loc=0, scale=0.5)
+
+ax[0].hist(values, bins=int(bin_num), density=True, color='b', edgecolor='k')
+ax[0].plot(x, y0, linewidth=2, color='y', label='U(a, b)')
+ax[0].legend(fontsize=15)
+
+ax[1].hist(values, bins=int(bin_num), density=True, color='b', edgecolor='k')
+ax[1].plot(x, y1, linewidth=2, color='y', label=r'Exp($\lambda$)')
+ax[1].legend(fontsize=15)
+
+ax[2].hist(values, bins=int(bin_num), density=True, color='b', edgecolor='k')
+ax[2].plot(x, y2, linewidth=2, color='y', label=r'N(a, $\sigma^2$)')
+ax[2].legend(fontsize=15)
+
+plt.show()
+```
+Because we have positive skew, data is definitely not uniform distribution. Also, the pdf of our distribution is left skewed. So I assume that the most suitable distribution is exponential.
+
+## Point estimation
+
+Let $x_1, \ldots, x_n$ is a realization of a sample $X_1, \ldots, X_n$ of a population. On the previous step we assumed that the population has the exponential distribution $X\simeq\mbox{Exp}(\frac{1}{\lambda})$ with unknown parameter $\vec{\theta} = (\lambda)$.
+
+### Method of Moments
+
+Let's estimate the value of unknown parameter with the help of *method of moments*. For this we equalize an expected value $\mathbb{E}X = \mu$ with a sample mean $\overline{X}$
+
+$$
+\begin{aligned}
+\frac{1}{\lambda} &= t, \\
+f_Y(y; t) &= t e^{-t y}, \quad y \geq 0, \\
+\mathbb{E}[Y] &= \int_{0}^{\infty} y t e^{-t y} \, dy, \\
+&= t \int_{0}^{\infty} y e^{-t y} \, dy, \\
+&= \left[ -\frac{y e^{-t y}}{t} \right]_{0}^{\infty} + \int_{0}^{\infty} \frac{e^{-t y}}{t} \, dy, \\
+&= \left( 0 - \left(-\frac{1}{t^2}\right) \right), \\
+\mathbb{E}[Y] &= \frac{1}{t}, \\
+\frac{1}{t} &= \overline{X}, \\
+t &= \frac{1}{\overline{X}}, \\
+\lambda^* &= \overline{X}, \\
+\theta^* &= \overline{X}.
+\end{aligned}
+$$
+
+So, for the given realization we have that
+
+$$ \theta^* = 1.21 $$
+
+### Maximum likelihood estimation
+$$
+\begin{aligned}
+\frac{1}{\lambda} &= t, \\
+\frac{d}{dt} L(t \mid x_1, x_2, \ldots, x_n) 
+&= \frac{d}{dt} t^n \left[ e^{-t(x_1 + x_2 + \ldots + x_n)} \right] \\
+&= \frac{d}{dt} \log \left( t^n \left[ e^{-t(x_1 + x_2 + \ldots + x_n)} \right] \right) \\
+&= \frac{d}{dt} \log(t^n) + \log \left[ e^{-t(x_1 + x_2 + \ldots + x_n)} \right] \\
+&= \frac{d}{dt} \left[ n \log(t) \right] - \frac{d}{dt} \left[ \t(x_1 + x_2 + \ldots + x_n) \right] \\
+&= \frac{n}{t} - (x_1 + x_2 + \ldots + x_n)\\
+
+\text{Setting the derivative to zero:} \\
+0 &= n \frac{1}{t} - (x_1 + x_2 + \ldots + x_n) \\
+(x_1 + x_2 + \ldots + x_n) &= n \frac{1}{t} \\
+t (x_1 + x_2 + \ldots + x_n) &= n \\
+t &= \frac{n}{x_1 + x_2 + \ldots + x_n}\\
+t = \frac{1}{\overline{X}}\\
+\theta^* &= \overline{X}.
+\end{aligned}
+$$
+
+So $\lambda^*$ is equal to
+```{python}
+#| message: false
+#| echo: false
+print(round(sum(values)/len(values), 3))
+```
+
+## Properties of point estimators
+n both methods, I obtained similar point estimators. In this section, I will focus on evaluating their statistical properties to determine their quality as estimators, rather than comparing the methods directly. Specifically, I will assess whether the estimators exhibit desirable properties such as unbiasedness, consistency, and efficiency.
+
+### Consistency
+$$
+\begin{aligned}
+\text{From the LLN, we can say that if :} \theta &= \mathbb{E}[X]
+\text{Then, } \theta^* &= \overline{X}, \\
+\text{is a consistent estimator of } \theta.
+\end{aligned}
+$$
+### Unbiasedness
+$$
+\begin{aligned}
+\theta &= \lambda\\
+\theta^* &= \overline{X}\\
+E[\bar{X}] &= \frac{1}{n} \sum_{i=1}^{n} E[X_i]\\
+&= \frac{1}{n} {n} \lambda\\
+&= \lambda
+\end{aligned}
+$$
+$$
+E[\theta^*_n] = \theta, \, \forall \theta \in \Theta, \quad \text{this means that the estimator is unbiased.}
+$$
+
+### Efficiency
+
+For $X_i \sim \text{Exp}\left(\frac{1}{\theta}\right)$, the variance of $X_i$ is:
+$$
+\mathrm{Var}(X_i) = \theta^2.
+$$
+
+The variance of the sample mean $\bar{X}$ is:
+$$
+\mathrm{Var}(\bar{X}) = \frac{\mathrm{Var}(X_i)}{n} = \frac{\theta^2}{n}.
+$$
+
+The Fisher Information for $n$ observations is:
+$$
+\mathcal{I}_n(\theta) = -\mathbb{E}\left[\frac{\partial^2 \ell}{\partial \theta^2}\right] = \frac{n}{\theta^2}.
+$$
+
+The Cramér-Rao Lower Bound (CRLB) is:
+$$
+\text{CRLB} = \frac{1}{\mathcal{I}_n(\theta)} = \frac{\theta^2}{n}.
+$$
+
+The variance of $\bar{X}$ is:
+$$
+\mathrm{Var}(\bar{X}) = \frac{\theta^2}{n}.
+$$
+
+Since $\mathrm{Var}(\bar{X}) = \text{CRLB}$, the estimator $\bar{X}$ achieves the Cramér-Rao Lower Bound, thus is efficient.
+
+The estimator $\bar{X}$ satisfies all the desired properties (unbiasedness, consistency, and efficiency). Therefore, it will be used in the subsequent steps.
+
+
+## Confidence intervals for unknown parameters of a population
+
+### Confidence interval for the parameter $\mu$ with an unknown $\sigma^2$
+
+```{python}
+#| message: false
+#| echo: false
+n1 = len(values)
+gamma = 0.95
+t1_gamma = stats.t.ppf(0.5*(1 + gamma), df=n1-1)
+
+mu_est = mean
+sigma2_est = unbiased_var 
+
+mu_1 = mu_est - t1_gamma * sigma2_est**0.5 / (n1 - 1)**0.5
+mu_1 = float(np.around(mu_1, 5))
+mu_2 = mu_est + t1_gamma * sigma2_est**0.5 / (n1 - 1)**0.5
+mu_2 = float(np.around(mu_2, 5))
+
+```
+
+Let's find confidence intervals for parameters $\mu$ of the given confidence level $\gamma$ = 0.95.
+
+$$
+\mu_1 = \overline{X} - \frac{t_{\gamma}\sqrt{\mbox{Var}^{**}X}}{\sqrt{n-1}}, \quad a_2 = \overline{X} + \frac{t_{\gamma}\sqrt{\mbox{Var}^{**}X}}{\sqrt{n-1}}.
+$$
+
+The value of $t_{\gamma}$ is defined from
+
+$$
+\mathbb{P}(|St_{n-1}|<t_{\gamma}) = \gamma,
+$$
+
+where a random variable $St_{n-1}$ has Student's distribution with $n-1$ degrees of freedom. For $\gamma=0.95$, $n=100$ we have $t_{\gamma} = `{python} t1_gamma`$. Also $\overline{X}$ = `{python} mean`, $Var^{**}X$ = `{python} unbiased_var`. Then the confidence interval is of the form
+
+`{python} (mu_1, mu_2)`
+
+## Hypothesis testing
+
+I have two hypotheses:
+
+$H_0$ - the data follows the exponential distribution  $X\simeq\mbox{Exp}(\frac{1}{\lambda})$ $\lambda$ = `{python} mean` 
+
+$H_1$ - this is another distribution (I am cooked)
+
+To verify the hypotheses I will use the  use the chi-squared goodness-of-fit test.
+Now the number of parameters equals $s=1$. A maximum likelihood estimators have a form
+
+$$
+\lambda^*=\overline{X}, \quad \mbox{where} \quad \overline{X}=\frac{1}{n}\sum\limits_{i=1}^nX_i.
+$$
+
+For a given realization we have that $\mu^*=$ `{python} mean`.
+
+Let's divide a set of all possible values of random variable $X$ in to classes
+
+$$
+\mathbb{R} = \cup_{i=1}^m \hat{\Delta}_i.
+$$
+
+    
+|Class     |Frequency|Theoretical frequency|$O - E$|$\frac{(O - E)^2}{E}$|
+|:--------:|:-----:|:----------------:|:-----:|:-------------------:|
+|$\hat{\Delta}_1$|$n_1$  |$np_1$            |       |                     |
+|$\hat{\Delta}_2$|$n_2$  |$np_2$            |       |                     |
+|...       |...    |...               |       |                     |
+|$\hat{\Delta}_m$|$n_m$  |$np_m$            |       |                     |
+
+```{python}
+#| message: false
+#| echo: false
+n = len(values)
+lambda_ = 1/ sample_mean_grouped
+theoretical_frequencies = []
+for i in range(1, len(bin_edges)):
+    a = bin_edges[i-1]  
+    b = bin_edges[i]    
+    Ei = n * (1 - np.exp(-lambda_ * b) - (1 - np.exp(-lambda_ * a)))  
+    theoretical_frequencies.append(np.round(Ei, 1))
+chi_df = pd.DataFrame({
+    "Bins": df['Bins'],
+    'Frequency': df['Frequency'],
+    'Theoretical_freq': theoretical_frequencies
+})
+chi_df['o_e'] = chi_df['Frequency']- chi_df['Theoretical_freq']
+chi_df['o_e_2'] = (chi_df['o_e']**2)/chi_df['Theoretical_freq']
+chi_df
+```
+Because theoretical frequency in bins 4-6 is less then 5. We need to join these classes.
+
+```{python}
+#| message: false
+#| echo: false
+bin_edges_1 = [0., 0.81, 1.62, 2.43, 3.24, 5.77]
+theoretical_frequencies = []
+for i in range(1, len(bin_edges_1)):
+    a = bin_edges_1[i-1]  
+    b = bin_edges_1[i]    
+    Ei = n * (1 - np.exp(-lambda_ * b) - (1 - np.exp(-lambda_ * a)))  
+    theoretical_frequencies.append(np.round(Ei,1))
+
+bins = list(df['Bins'][0:4]) + ['3.24-5.77']
+frequencies = list(df['Frequency'][0:4]) + [sum(df['Frequency'][4:])]
+chi_df = pd.DataFrame({
+    "Bins": bins,
+    'Frequency': frequencies,
+    'Theoretical_freq': theoretical_frequencies
+})
+chi_df['o_e'] = chi_df['Frequency']- chi_df['Theoretical_freq']
+chi_df['o_e_2'] = (chi_df['o_e']**2)/chi_df['Theoretical_freq']
+x, chi = np.sum(chi_df['o_e_2']), stats.chi2.ppf(q=0.95, df=3)
+
+chi_df
+```
+
+
+Consider a significance level $\alpha=0.05$. The number of classes equals $m=5$, the number of parameters $s=1$, so the critical value $x_{0.05}$ equals to the quantile of the level $1 - \alpha = 0.95$ of the chi-squared distribution with $m - s - 1= 5 - 1 - 1 = 3$ degrees of freedom
+
+The value of the chi-squared statistic equals
+$$
+\hat{\chi}^2(75) = 2.39.
+$$
+
+$$
+x_{\alpha} = 7.8147.
+$$
+
+We have that $\hat{\chi}^2(100) = 2.39 < 7.8147 = x_{0.05}$, so on the significance level $\alpha=0.05$ we do not have sufficient grounds to reject the $H_0$. Therefore, the data follows exponential distribution $\mbox{Exp}(\frac{1}{1.25})$.
